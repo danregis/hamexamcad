@@ -1,5 +1,7 @@
 import { QUESTIONS } from './questions_data.js';
 import { QUESTIONS_FR } from './questions_data_fr.js';
+import { QUESTIONS_ADV } from './questions_data_advanced.js';
+import { QUESTIONS_ADV_FR } from './questions_data_advanced_fr.js';
 
 const SECTIONS_EN = {
   'B-001': 'Section 1 — Regulations and Policies',
@@ -118,6 +120,8 @@ ${wrongRows ? `<h3>Incorrect Answers</h3><table border="1" cellpadding="6" cells
 function buildHTML() {
   const questionsEnJson = JSON.stringify(QUESTIONS);
   const questionsFrJson = JSON.stringify(QUESTIONS_FR);
+  const questionsAdvEnJson = JSON.stringify(QUESTIONS_ADV);
+  const questionsAdvFrJson = JSON.stringify(QUESTIONS_ADV_FR);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -160,6 +164,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .logo .maple { font-size: 48px; }
 .logo h1 { font-size: 22px; color: var(--red); font-weight: 700; margin-top: 8px; }
 .logo h2 { font-size: 15px; color: var(--muted); font-weight: 400; margin-top: 4px; }
+.exam-type-selector { display: flex; gap: 10px; margin-bottom: 18px; }
+.exam-type-btn { flex: 1; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 2px solid var(--border); border-radius: 10px; cursor: pointer; transition: all .15s; user-select: none; background: var(--card); }
+.exam-type-btn:hover { border-color: var(--red); }
+.exam-type-btn.active { border-color: var(--red); background: #fff8f0; }
+.exam-type-check { font-size: 18px; color: var(--border); flex-shrink: 0; transition: color .15s; }
+.exam-type-btn.active .exam-type-check { color: var(--red); }
+.exam-type-name { font-size: 14px; font-weight: 700; color: var(--text); }
+.exam-type-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .info-box { background: #fff8f0; border-left: 4px solid var(--red); border-radius: 4px; padding: 14px 16px; margin-bottom: 24px; font-size: 14px; line-height: 1.6; }
 label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; margin-top: 16px; }
 input[type=text], input[type=email] { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; outline: none; transition: border .15s; }
@@ -252,6 +264,22 @@ input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(213,43,30,.12
       <h1 id="s-title">Canadian Amateur Radio</h1>
       <h2 id="s-subtitle">Basic Qualification Practice Exam</h2>
     </div>
+    <div class="exam-type-selector">
+      <div class="exam-type-btn active" id="btn-type-basic" onclick="setExamType('basic')">
+        <span class="exam-type-check">✓</span>
+        <div>
+          <div class="exam-type-name" id="lbl-type-basic">Basic Qualification</div>
+          <div class="exam-type-sub">100 questions · 8 sections</div>
+        </div>
+      </div>
+      <div class="exam-type-btn" id="btn-type-adv" onclick="setExamType('advanced')">
+        <span class="exam-type-check">✓</span>
+        <div>
+          <div class="exam-type-name" id="lbl-type-adv">Advanced Qualification</div>
+          <div class="exam-type-sub">50 questions · 7 sections</div>
+        </div>
+      </div>
+    </div>
     <div class="info-box" id="s-info"></div>
     <form id="start-form" onsubmit="startExam(event)">
       <label id="s-name-label" for="inp-name">Full Name</label>
@@ -321,6 +349,8 @@ input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(213,43,30,.12
 <script>
 const ALL_QUESTIONS_EN = ${questionsEnJson};
 const ALL_QUESTIONS_FR = ${questionsFrJson};
+const ALL_QUESTIONS_ADV_EN = ${questionsAdvEnJson};
+const ALL_QUESTIONS_ADV_FR = ${questionsAdvFrJson};
 
 const SECTIONS = {
   en: {
@@ -332,6 +362,13 @@ const SECTIONS = {
     'B-006':'Section 6 — Feedlines and Antenna Systems',
     'B-007':'Section 7 — Radio Wave Propagation',
     'B-008':'Section 8 — Interference and Suppression',
+    'A-001':'Section 1 — Math & Physics',
+    'A-002':'Section 2 — Components & Circuits',
+    'A-003':'Section 3 — Practical Circuits',
+    'A-004':'Section 4 — Signals & Emissions',
+    'A-005':'Section 5 — Antennas & Feedlines',
+    'A-006':'Section 6 — Propagation',
+    'A-007':'Section 7 — Station',
   },
   fr: {
     'B-001':'Section 1 — Réglementation et politiques',
@@ -342,14 +379,24 @@ const SECTIONS = {
     'B-006':'Section 6 — Lignes d\\'alimentation et systèmes d\\'antennes',
     'B-007':'Section 7 — Propagation des ondes radio',
     'B-008':'Section 8 — Interférence et suppression',
+    'A-001':'Section 1 — Mathématiques et physique',
+    'A-002':'Section 2 — Composants et circuits',
+    'A-003':'Section 3 — Circuits pratiques',
+    'A-004':'Section 4 — Signaux et émissions',
+    'A-005':'Section 5 — Antennes et lignes d\\'alimentation',
+    'A-006':'Section 6 — Propagation',
+    'A-007':'Section 7 — Station',
   }
 };
 
 const STR = {
   en: {
     title: 'Canadian Amateur Radio',
-    subtitle: 'Basic Qualification Practice Exam',
-    info: '<strong>100 questions</strong> drawn randomly from the official ISED question bank (984 questions across 8 sections).<br><strong>Pass:</strong> 70/100 (70%) &nbsp;|&nbsp; <strong>Honours:</strong> 80/100 (80%)<br>Source: ISED Basic Qualification (effective 15 July 2025)',
+    subtitle: 'Qualification Practice Exam',
+    examTypeBasic: '✓ Basic Qualification',
+    examTypeAdv: '✓ Advanced Qualification',
+    infoBasic: '<strong>100 questions</strong> drawn randomly from the official ISED question bank (984 questions across 8 sections).<br><strong>Pass:</strong> 70/100 (70%) &nbsp;|&nbsp; <strong>Honours:</strong> 80/100 (80%)<br>Source: ISED Basic Qualification (effective 15 July 2025)',
+    infoAdv: '<strong>50 questions</strong> drawn randomly from the official ISED question bank (549 questions across 7 sections).<br><strong>Pass:</strong> 35/50 (70%) &nbsp;|&nbsp; <strong>Honours:</strong> 40/50 (80%)<br>Source: ISED Advanced Qualification (effective 15 July 2025)',
     nameLabel: 'Full Name',
     emailLabel: 'Email Address',
     startBtn: 'Start Exam →',
@@ -364,8 +411,10 @@ const STR = {
     confirmPartial: 'You have {n} unanswered questions. Submit anyway?',
     confirmFull: 'Submit your exam? You cannot change your answers after submission.',
     resultsFor: 'Results for {name}',
-    honours: '🏆 Basic with Honours',
-    pass: '✅ Basic Qualification — PASS',
+    honoursBasic: '🏆 Basic with Honours',
+    honoursAdv: '🏆 Advanced with Honours',
+    passBasic: '✅ Basic Qualification — PASS',
+    passAdv: '✅ Advanced Qualification — PASS',
     fail: '❌ Not Passed — {n} more correct needed',
     retake: '↺ New Exam',
     emailTitle: '📧 Receive Results by Email',
@@ -385,8 +434,11 @@ const STR = {
   },
   fr: {
     title: 'Radio Amateur Canadien',
-    subtitle: 'Examen pratique de qualification de base',
-    info: "<strong>100 questions</strong> tirées aléatoirement de la banque officielle de l'ISDE (984 questions dans 8 sections).<br><strong>Réussite:</strong> 70/100 (70%) &nbsp;|&nbsp; <strong>Avec mention:</strong> 80/100 (80%)<br>Source: Qualification de base ISDE (en vigueur le 15 juillet 2025)",
+    subtitle: "Examen pratique de qualification",
+    examTypeBasic: '✓ Qualification de base',
+    examTypeAdv: '✓ Qualification supérieure',
+    infoBasic: "<strong>100 questions</strong> tirées aléatoirement de la banque officielle de l'ISDE (984 questions dans 8 sections).<br><strong>Réussite:</strong> 70/100 (70%) &nbsp;|&nbsp; <strong>Avec mention:</strong> 80/100 (80%)<br>Source: Qualification de base ISDE (en vigueur le 15 juillet 2025)",
+    infoAdv: "<strong>50 questions</strong> tirées aléatoirement de la banque officielle de l'ISDE (549 questions dans 7 sections).<br><strong>Réussite:</strong> 35/50 (70%) &nbsp;|&nbsp; <strong>Avec mention:</strong> 40/50 (80%)<br>Source: Qualification supérieure ISDE (en vigueur le 15 juillet 2025)",
     nameLabel: 'Nom complet',
     emailLabel: 'Adresse courriel',
     startBtn: "Commencer l'examen →",
@@ -401,8 +453,10 @@ const STR = {
     confirmPartial: 'Vous avez {n} questions sans réponse. Soumettre quand même ?',
     confirmFull: 'Soumettre votre examen ? Vous ne pourrez plus modifier vos réponses.',
     resultsFor: 'Résultats de {name}',
-    honours: '🏆 Qualification de base avec mention',
-    pass: '✅ Qualification de base — RÉUSSI',
+    honoursBasic: '🏆 Qualification de base avec mention',
+    honoursAdv: '🏆 Qualification supérieure avec mention',
+    passBasic: '✅ Qualification de base — RÉUSSI',
+    passAdv: '✅ Qualification supérieure — RÉUSSI',
     fail: '❌ Non réussi — {n} bonne(s) réponse(s) manquante(s)',
     retake: '↺ Nouvel examen',
     emailTitle: '📧 Recevoir les résultats par courriel',
@@ -423,6 +477,7 @@ const STR = {
 };
 
 let lang = localStorage.getItem('lang') || 'en';
+let examType = 'basic'; // 'basic' | 'advanced'
 let userName = '', userEmail = '';
 let examQuestions = [], userAnswers = {}, flagged = new Set();
 let currentQ = 0, submitted = false, lastResults = null, registrationId = null, emailAutoSent = false;
@@ -451,13 +506,22 @@ function toggleLang() {
   applyLang();
 }
 
+function setExamType(type) {
+  examType = type;
+  document.getElementById('btn-type-basic').classList.toggle('active', type === 'basic');
+  document.getElementById('btn-type-adv').classList.toggle('active', type === 'advanced');
+  document.getElementById('s-info').innerHTML = t(type === 'advanced' ? 'infoAdv' : 'infoBasic');
+}
+
 function applyLang() {
   document.documentElement.lang = lang;
   document.getElementById('lang-toggle').textContent = t('langBtn');
   // Start screen
   document.getElementById('s-title').textContent = t('title');
   document.getElementById('s-subtitle').textContent = t('subtitle');
-  document.getElementById('s-info').innerHTML = t('info');
+  document.getElementById('lbl-type-basic').textContent = t('examTypeBasic').replace('✓ ', '');
+  document.getElementById('lbl-type-adv').textContent = t('examTypeAdv').replace('✓ ', '');
+  document.getElementById('s-info').innerHTML = t(examType === 'advanced' ? 'infoAdv' : 'infoBasic');
   document.getElementById('s-name-label').textContent = t('nameLabel');
   document.getElementById('s-email-label').textContent = t('emailLabel');
   const startBtn = document.getElementById('btn-start');
@@ -475,7 +539,9 @@ function applyLang() {
   document.getElementById('r-breakdown-title').textContent = t('breakdown');
   // Re-render active dynamic content — swap question language if exam is running
   if (examQuestions.length > 0 && document.getElementById('screen-exam').classList.contains('active')) {
-    const all = lang === 'fr' ? ALL_QUESTIONS_FR : ALL_QUESTIONS_EN;
+    const all = examType === 'advanced'
+      ? (lang === 'fr' ? ALL_QUESTIONS_ADV_FR : ALL_QUESTIONS_ADV_EN)
+      : (lang === 'fr' ? ALL_QUESTIONS_FR : ALL_QUESTIONS_EN);
     examQuestions = examQuestions.map(q => all.find(fq => fq.id === q.id) || q);
     renderQuestion(currentQ);
   }
@@ -485,7 +551,9 @@ function applyLang() {
 }
 
 function pickExam() {
-  const all = lang === 'fr' ? ALL_QUESTIONS_FR : ALL_QUESTIONS_EN;
+  const all = examType === 'advanced'
+    ? (lang === 'fr' ? ALL_QUESTIONS_ADV_FR : ALL_QUESTIONS_ADV_EN)
+    : (lang === 'fr' ? ALL_QUESTIONS_FR : ALL_QUESTIONS_EN);
   const byTopic = {};
   for (const q of all) {
     const k = q.id.substring(0, 9);
@@ -662,9 +730,10 @@ function renderResults(results) {
   document.getElementById('res-score').textContent = score + '/' + total;
   document.getElementById('res-pct').textContent = pct + '%';
   const badge = document.getElementById('res-badge');
-  if (pct >= 80) { badge.textContent = t('honours'); badge.className = 'status-badge status-honours'; }
-  else if (pct >= 70) { badge.textContent = t('pass'); badge.className = 'status-badge status-pass'; }
-  else { badge.textContent = t('fail', { n: 70 - score }); badge.className = 'status-badge status-fail'; }
+  const sfx = examType === 'advanced' ? 'Adv' : 'Basic';
+  if (pct >= 80) { badge.textContent = t('honours' + sfx); badge.className = 'status-badge status-honours'; }
+  else if (pct >= 70) { badge.textContent = t('pass' + sfx); badge.className = 'status-badge status-pass'; }
+  else { badge.textContent = t('fail', { n: Math.ceil(total * 0.7) - score }); badge.className = 'status-badge status-fail'; }
   document.getElementById('res-email').value = userEmail;
   document.getElementById('r-email-title').textContent = t('emailTitle');
   document.getElementById('btn-send-email').textContent = t('sendEmail');
