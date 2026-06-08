@@ -402,6 +402,7 @@ const STR = {
     startBtn: 'Start Exam →',
     registering: 'Registering…',
     examTitle: '🍁 Basic Qualification Exam',
+    examTitleAdv: '🍁 Advanced Qualification Exam',
     gridTitle: 'Question Overview — click to jump',
     prev: '← Previous',
     next: 'Next →',
@@ -444,6 +445,7 @@ const STR = {
     startBtn: "Commencer l'examen →",
     registering: 'Inscription…',
     examTitle: '🍁 Examen de qualification de base',
+    examTitleAdv: '🍁 Examen de qualification supérieure',
     gridTitle: 'Aperçu des questions — cliquer pour accéder',
     prev: '← Précédent',
     next: 'Suivant →',
@@ -527,7 +529,7 @@ function applyLang() {
   const startBtn = document.getElementById('btn-start');
   if (!startBtn.disabled) startBtn.textContent = t('startBtn');
   // Exam screen
-  document.getElementById('e-title').textContent = t('examTitle');
+  document.getElementById('e-title').textContent = t(examType === 'advanced' ? 'examTitleAdv' : 'examTitle');
   document.getElementById('e-grid-title').textContent = t('gridTitle');
   document.getElementById('btn-prev').textContent = t('prev');
   document.getElementById('btn-next').textContent = t('next');
