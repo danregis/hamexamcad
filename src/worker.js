@@ -45,6 +45,12 @@ async function handleRegister(request, env) {
         registered_at TEXT DEFAULT (datetime('now')),
         score INTEGER, total INTEGER, passed INTEGER, completed_at TEXT
       )`);
+      const existing = await env.DB
+        .prepare('SELECT id FROM registrations WHERE email = ?')
+        .bind(email).first();
+      if (existing) {
+        return Response.json({ success: false, alreadyRegistered: true });
+      }
       const result = await env.DB
         .prepare('INSERT INTO registrations (name, email) VALUES (?, ?)')
         .bind(name, email).run();
@@ -241,6 +247,7 @@ input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(213,43,30,.12
       <input type="text" id="inp-name" required placeholder="Your full name" autocomplete="name">
       <label id="s-email-label" for="inp-email">Email Address</label>
       <input type="email" id="inp-email" required placeholder="your@email.com" autocomplete="email">
+      <div id="email-error" style="color:#c62828;font-size:13px;margin-top:4px;display:none"></div>
       <button type="submit" class="btn-primary" id="btn-start">Start Exam →</button>
     </form>
   </div>
@@ -357,6 +364,8 @@ const STR = {
     emailSent: '✓ Results sent to {email}',
     emailNoKey: 'Results saved. (Email requires RESEND_API_KEY)',
     emailFail: '✗ Failed to send. Please try again.',
+    alreadyRegistered: '⚠ This email is already registered. Please use a different email.',
+    emailAutoSent: '✓ Results automatically sent to {email}',
     breakdown: 'Section Breakdown',
     wrong: 'Incorrect Answers ({n})',
     yourAns: '✗ Your answer: {k}) {v}',
@@ -392,6 +401,8 @@ const STR = {
     emailSent: '✓ Résultats envoyés à {email}',
     emailNoKey: 'Résultats sauvegardés. (Courriel nécessite RESEND_API_KEY)',
     emailFail: "✗ Échec de l'envoi. Veuillez réessayer.",
+    alreadyRegistered: '⚠ Ce courriel est déjà enregistré. Veuillez utiliser un autre courriel.',
+    emailAutoSent: '✓ Résultats envoyés automatiquement à {email}',
     breakdown: 'Résultats par section',
     wrong: 'Réponses incorrectes ({n})',
     yourAns: '✗ Votre réponse : {k}) {v}',
@@ -404,7 +415,7 @@ const STR = {
 let lang = localStorage.getItem('lang') || 'en';
 let userName = '', userEmail = '';
 let examQuestions = [], userAnswers = {}, flagged = new Set();
-let currentQ = 0, submitted = false, lastResults = null, registrationId = null;
+let currentQ = 0, submitted = false, lastResults = null, registrationId = null, emailAutoSent = false;
 
 function t(key, vars) {
   let s = STR[lang][key] || STR.en[key] || key;
@@ -472,6 +483,8 @@ function pickExam() {
 async function startExam(e) {
   e.preventDefault();
   const btn = document.getElementById('btn-start');
+  const emailError = document.getElementById('email-error');
+  emailError.style.display = 'none';
   btn.disabled = true;
   btn.textContent = t('registering');
   userName = document.getElementById('inp-name').value.trim();
@@ -482,6 +495,13 @@ async function startExam(e) {
       body: JSON.stringify({ name: userName, email: userEmail }),
     });
     const data = await resp.json();
+    if (data.alreadyRegistered) {
+      emailError.textContent = t('alreadyRegistered');
+      emailError.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = t('startBtn');
+      return;
+    }
     registrationId = data.id;
   } catch {}
   examQuestions = pickExam();
@@ -576,11 +596,14 @@ function confirmSubmit() {
 async function submitExam() {
   submitted = true;
   lastResults = calculateResults();
+  emailAutoSent = false;
   try {
-    await fetch('/submit', {
+    const resp = await fetch('/submit', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...lastResults, name: userName, email: userEmail, registrationId }),
     });
+    const data = await resp.json();
+    emailAutoSent = data.emailSent || false;
   } catch {}
   showScreen('results');
   renderResults(lastResults);
@@ -613,6 +636,16 @@ function renderResults(results) {
   document.getElementById('res-email').value = userEmail;
   document.getElementById('r-email-title').textContent = t('emailTitle');
   document.getElementById('btn-send-email').textContent = t('sendEmail');
+  const emailStatus = document.getElementById('email-status');
+  const emailForm = document.querySelector('.email-form');
+  if (emailAutoSent) {
+    emailStatus.textContent = t('emailAutoSent', { email: userEmail });
+    emailStatus.style.color = 'var(--green)';
+    emailForm.style.display = 'none';
+  } else {
+    emailStatus.textContent = '';
+    emailForm.style.display = '';
+  }
   document.getElementById('btn-retake').textContent = t('retake');
   document.getElementById('r-breakdown-title').textContent = t('breakdown');
   const bd = document.getElementById('section-breakdown');
