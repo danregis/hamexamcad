@@ -430,6 +430,7 @@ let currentQ = 0, submitted = false, lastResults = null, registrationId = null, 
 let toastTimer = null;
 function showToast(msg) {
   const el = document.getElementById('toast');
+  if (!el) { alert(msg); return; }
   el.textContent = msg;
   el.classList.add('show');
   if (toastTimer) clearTimeout(toastTimer);
@@ -506,6 +507,15 @@ async function startExam(e) {
   btn.textContent = t('registering');
   userName = document.getElementById('inp-name').value.trim();
   userEmail = document.getElementById('inp-email').value.trim();
+
+  // Client-side check: localStorage stores email on first successful register
+  if (localStorage.getItem('registered_email') === userEmail) {
+    showToast(t('alreadyRegistered'));
+    btn.disabled = false; btn.textContent = t('startBtn');
+    return;
+  }
+
+  let alreadyReg = false;
   try {
     const resp = await fetch('/register', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -513,13 +523,19 @@ async function startExam(e) {
     });
     const data = await resp.json();
     if (data.alreadyRegistered) {
-      showToast(t('alreadyRegistered'));
-      btn.disabled = false;
-      btn.textContent = t('startBtn');
-      return;
+      alreadyReg = true;
+    } else {
+      registrationId = data.id;
+      localStorage.setItem('registered_email', userEmail);
     }
-    registrationId = data.id;
   } catch {}
+
+  if (alreadyReg) {
+    showToast(t('alreadyRegistered'));
+    btn.disabled = false; btn.textContent = t('startBtn');
+    return;
+  }
+
   examQuestions = pickExam();
   userAnswers = {}; flagged = new Set(); currentQ = 0; submitted = false;
   btn.disabled = false; btn.textContent = t('startBtn');
