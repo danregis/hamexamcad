@@ -1,4 +1,5 @@
 import { QUESTIONS } from './questions_data.js';
+import { QUESTIONS_FR } from './questions_data_fr.js';
 
 const SECTIONS_EN = {
   'B-001': 'Section 1 — Regulations and Policies',
@@ -109,7 +110,8 @@ ${wrongRows ? `<h3>Incorrect Answers</h3><table border="1" cellpadding="6" cells
 }
 
 function buildHTML() {
-  const questionsJson = JSON.stringify(QUESTIONS);
+  const questionsEnJson = JSON.stringify(QUESTIONS);
+  const questionsFrJson = JSON.stringify(QUESTIONS_FR);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -300,7 +302,8 @@ input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(213,43,30,.12
 </div>
 
 <script>
-const ALL_QUESTIONS = ${questionsJson};
+const ALL_QUESTIONS_EN = ${questionsEnJson};
+const ALL_QUESTIONS_FR = ${questionsFrJson};
 
 const SECTIONS = {
   en: {
@@ -439,8 +442,10 @@ function applyLang() {
   document.getElementById('r-email-title').textContent = t('emailTitle');
   document.getElementById('btn-send-email').textContent = t('sendEmail');
   document.getElementById('r-breakdown-title').textContent = t('breakdown');
-  // Re-render active dynamic content
+  // Re-render active dynamic content — swap question language if exam is running
   if (examQuestions.length > 0 && document.getElementById('screen-exam').classList.contains('active')) {
+    const all = lang === 'fr' ? ALL_QUESTIONS_FR : ALL_QUESTIONS_EN;
+    examQuestions = examQuestions.map(q => all.find(fq => fq.id === q.id) || q);
     renderQuestion(currentQ);
   }
   if (lastResults && document.getElementById('screen-results').classList.contains('active')) {
@@ -448,12 +453,13 @@ function applyLang() {
   }
 }
 
-function pickExam(all) {
+function pickExam() {
+  const all = lang === 'fr' ? ALL_QUESTIONS_FR : ALL_QUESTIONS_EN;
   const byTopic = {};
   for (const q of all) {
-    const t = q.id.substring(0, 9);
-    if (!byTopic[t]) byTopic[t] = [];
-    byTopic[t].push(q);
+    const k = q.id.substring(0, 9);
+    if (!byTopic[k]) byTopic[k] = [];
+    byTopic[k].push(q);
   }
   const picked = Object.values(byTopic).map(arr => arr[Math.floor(Math.random() * arr.length)]);
   for (let i = picked.length - 1; i > 0; i--) {
@@ -478,7 +484,7 @@ async function startExam(e) {
     const data = await resp.json();
     registrationId = data.id;
   } catch {}
-  examQuestions = pickExam(ALL_QUESTIONS);
+  examQuestions = pickExam();
   userAnswers = {}; flagged = new Set(); currentQ = 0; submitted = false;
   btn.disabled = false; btn.textContent = t('startBtn');
   buildGrid(); goTo(0); showScreen('exam');
