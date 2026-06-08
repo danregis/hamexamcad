@@ -134,6 +134,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .screen { display: none; }
 .screen.active { display: block; }
 
+/* Toast */
+#toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  background: #b71c1c; color: #fff; padding: 12px 24px; border-radius: 8px;
+  font-size: 14px; font-weight: 600; z-index: 9999; box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  opacity: 0; pointer-events: none; transition: opacity .3s ease;
+  max-width: 90vw; text-align: center;
+}
+#toast.show { opacity: 1; }
+
 /* Lang toggle */
 #lang-toggle {
   position: fixed; top: 14px; right: 16px; z-index: 999;
@@ -231,6 +241,7 @@ input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(213,43,30,.12
 </head>
 <body>
 
+<div id="toast"></div>
 <button id="lang-toggle" onclick="toggleLang()">FR</button>
 
 <!-- START -->
@@ -247,7 +258,6 @@ input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(213,43,30,.12
       <input type="text" id="inp-name" required placeholder="Your full name" autocomplete="name">
       <label id="s-email-label" for="inp-email">Email Address</label>
       <input type="email" id="inp-email" required placeholder="your@email.com" autocomplete="email">
-      <div id="email-error" style="color:#c62828;font-size:13px;margin-top:4px;display:none"></div>
       <button type="submit" class="btn-primary" id="btn-start">Start Exam →</button>
     </form>
   </div>
@@ -417,6 +427,15 @@ let userName = '', userEmail = '';
 let examQuestions = [], userAnswers = {}, flagged = new Set();
 let currentQ = 0, submitted = false, lastResults = null, registrationId = null, emailAutoSent = false;
 
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.classList.remove('show'); }, 3000);
+}
+
 function t(key, vars) {
   let s = STR[lang][key] || STR.en[key] || key;
   if (vars) Object.entries(vars).forEach(([k, v]) => { s = s.replace('{' + k + '}', v); });
@@ -483,8 +502,6 @@ function pickExam() {
 async function startExam(e) {
   e.preventDefault();
   const btn = document.getElementById('btn-start');
-  const emailError = document.getElementById('email-error');
-  emailError.style.display = 'none';
   btn.disabled = true;
   btn.textContent = t('registering');
   userName = document.getElementById('inp-name').value.trim();
@@ -496,8 +513,7 @@ async function startExam(e) {
     });
     const data = await resp.json();
     if (data.alreadyRegistered) {
-      emailError.textContent = t('alreadyRegistered');
-      emailError.style.display = 'block';
+      showToast(t('alreadyRegistered'));
       btn.disabled = false;
       btn.textContent = t('startBtn');
       return;
