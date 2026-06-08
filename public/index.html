@@ -3459,6 +3459,7 @@ function setExamType(type) {
   document.getElementById('btn-type-basic').classList.toggle('active', type === 'basic');
   document.getElementById('btn-type-adv').classList.toggle('active', type === 'advanced');
   document.getElementById('s-info').innerHTML = t(type === 'advanced' ? 'infoAdv' : 'infoBasic');
+  document.getElementById('e-title').textContent = t(type === 'advanced' ? 'examTitleAdv' : 'examTitle');
 }
 
 function applyLang() {
