@@ -2,6 +2,11 @@ name = "hamexamcad"
 main = "src/worker.js"
 compatibility_date = "2025-07-01"
 
+[[d1_databases]]
+binding = "DB"
+database_name = "hamexam-db"
+database_id = "YOUR_DATABASE_ID_HERE"
+
 # Optional email secrets:
 #   wrangler secret put RESEND_API_KEY
 #   wrangler secret put FROM_EMAIL

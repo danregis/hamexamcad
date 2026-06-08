@@ -21,6 +21,10 @@ export default {
       });
     }
 
+    if (request.method === 'POST' && url.pathname === '/register') {
+      return handleRegister(request, env);
+    }
+
     if (request.method === 'POST' && url.pathname === '/submit') {
       return handleSubmit(request, env);
     }
@@ -29,23 +33,61 @@ export default {
   },
 };
 
+async function handleRegister(request, env) {
+  try {
+    const { name, email } = await request.json();
+    if (!name || !email) {
+      return Response.json({ success: false, error: 'Name and email required' }, { status: 400 });
+    }
+
+    let registrationId = null;
+    if (env.DB) {
+      await env.DB.exec(`CREATE TABLE IF NOT EXISTS registrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        registered_at TEXT DEFAULT (datetime('now')),
+        score INTEGER,
+        total INTEGER,
+        passed INTEGER,
+        completed_at TEXT
+      )`);
+
+      const result = await env.DB
+        .prepare('INSERT INTO registrations (name, email) VALUES (?, ?)')
+        .bind(name, email)
+        .run();
+
+      registrationId = result.meta.last_row_id;
+    }
+
+    return Response.json({ success: true, id: registrationId });
+  } catch (e) {
+    return Response.json({ success: false, error: e.message }, { status: 500 });
+  }
+}
+
 async function handleSubmit(request, env) {
   try {
     const data = await request.json();
+    const { registrationId, score, total, email } = data;
     let emailSent = false;
 
-    if (data.email && env.RESEND_API_KEY) {
+    if (env.DB && registrationId) {
+      const passed = score / total >= 0.7 ? 1 : 0;
+      await env.DB
+        .prepare('UPDATE registrations SET score=?, total=?, passed=?, completed_at=datetime("now") WHERE id=?')
+        .bind(score, total, passed, registrationId)
+        .run();
+    }
+
+    if (email && env.RESEND_API_KEY) {
       emailSent = await sendResultsEmail(data, env);
     }
 
-    return new Response(JSON.stringify({ success: true, emailSent }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return Response.json({ success: true, emailSent });
   } catch (e) {
-    return new Response(JSON.stringify({ success: false, error: e.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return Response.json({ success: false, error: e.message }, { status: 500 });
   }
 }
 
@@ -137,7 +179,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .screen { display: none; }
 .screen.active { display: block; }
 
-/* ── START SCREEN ── */
 #screen-start { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
 .start-card { background: var(--card); border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,.10); padding: 40px; max-width: 520px; width: 100%; }
 .logo { text-align: center; margin-bottom: 24px; }
@@ -153,15 +194,15 @@ input[type=text], input[type=email] {
   border-radius: 8px; font-size: 15px; outline: none; transition: border .15s;
 }
 input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(213,43,30,.12); }
+input:invalid:not(:placeholder-shown) { border-color: #c62828; }
 .btn-primary {
   display: block; width: 100%; margin-top: 24px; padding: 14px;
   background: var(--red); color: white; border: none; border-radius: 8px;
   font-size: 16px; font-weight: 600; cursor: pointer; transition: background .15s;
 }
-.btn-primary:hover { background: var(--red-dark); }
+.btn-primary:hover:not(:disabled) { background: var(--red-dark); }
 .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
 
-/* ── EXAM SCREEN ── */
 #screen-exam { max-width: 900px; margin: 0 auto; padding: 16px; }
 .exam-header { background: var(--card); border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
 .exam-header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
@@ -180,8 +221,6 @@ input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(213,43,30,.12
 }
 .option-label:hover { border-color: #aaa; background: #fafafa; }
 .option-label.selected { border-color: var(--red); background: #fff2f1; }
-.option-label.correct { border-color: var(--green); background: #f1fdf2; }
-.option-label.wrong { border-color: #c62828; background: #fff3f3; }
 .option-label input[type=radio] { display: none; }
 .option-key {
   flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
@@ -189,8 +228,6 @@ input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(213,43,30,.12
   font-weight: 700; font-size: 13px; background: #f0f0f0; color: var(--text);
 }
 .option-label.selected .option-key { background: var(--red); color: white; }
-.option-label.correct .option-key { background: var(--green); color: white; }
-.option-label.wrong .option-key { background: #c62828; color: white; }
 
 .nav-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .btn-nav {
@@ -210,7 +247,6 @@ input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(213,43,30,.12
 }
 .btn-flag.flagged { background: #fff8e1; }
 
-/* Question grid */
 .q-grid-wrap { background: var(--card); border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
 .q-grid-title { font-size: 12px; color: var(--muted); margin-bottom: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
 .q-grid { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -223,7 +259,6 @@ input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(213,43,30,.12
 .q-dot.current { border-color: var(--red); }
 .q-dot.flagged { background: #fff3cd; color: #856404; }
 
-/* ── RESULTS SCREEN ── */
 #screen-results { max-width: 800px; margin: 0 auto; padding: 20px; }
 .results-header { background: var(--card); border-radius: 16px; padding: 36px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
 .score-big { font-size: 72px; font-weight: 800; color: var(--red); line-height: 1; }
@@ -285,11 +320,11 @@ input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(213,43,30,.12
       Source: ISED Basic Qualification (effective 15 July 2025)
     </div>
     <form id="start-form" onsubmit="startExam(event)">
-      <label for="inp-name">Full Name <span>(required)</span></label>
+      <label for="inp-name">Full Name</label>
       <input type="text" id="inp-name" required placeholder="Your full name" autocomplete="name">
-      <label for="inp-email">Email Address <span>(optional — to receive your results)</span></label>
-      <input type="email" id="inp-email" placeholder="your@email.com" autocomplete="email">
-      <button type="submit" class="btn-primary">Start Exam →</button>
+      <label for="inp-email">Email Address</label>
+      <input type="email" id="inp-email" required placeholder="your@email.com" autocomplete="email">
+      <button type="submit" class="btn-primary" id="btn-start">Start Exam →</button>
     </form>
   </div>
 </div>
@@ -334,7 +369,6 @@ input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(213,43,30,.12
 
   <div class="results-actions">
     <button class="btn-retake" onclick="retake()">↺ New Exam</button>
-    <div style="flex:1"></div>
   </div>
 
   <div class="results-card" id="email-card">
@@ -364,11 +398,12 @@ const SECTIONS = ${sectionsJson};
 let userName = '';
 let userEmail = '';
 let examQuestions = [];
-let userAnswers = {}; // index -> 'a'|'b'|'c'|'d'
+let userAnswers = {};
 let flagged = new Set();
 let currentQ = 0;
 let submitted = false;
 let lastResults = null;
+let registrationId = null;
 
 function pickExam(all) {
   const byTopic = {};
@@ -377,18 +412,45 @@ function pickExam(all) {
     if (!byTopic[t]) byTopic[t] = [];
     byTopic[t].push(q);
   }
-  return Object.values(byTopic).map(arr => arr[Math.floor(Math.random() * arr.length)]);
+  const picked = Object.values(byTopic).map(arr => arr[Math.floor(Math.random() * arr.length)]);
+  // Fisher-Yates shuffle so question order is different every time
+  for (let i = picked.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [picked[i], picked[j]] = [picked[j], picked[i]];
+  }
+  return picked;
 }
 
-function startExam(e) {
+async function startExam(e) {
   e.preventDefault();
+  const btn = document.getElementById('btn-start');
+  btn.disabled = true;
+  btn.textContent = 'Registering…';
+
   userName = document.getElementById('inp-name').value.trim();
   userEmail = document.getElementById('inp-email').value.trim();
+
+  try {
+    const resp = await fetch('/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: userName, email: userEmail }),
+    });
+    const data = await resp.json();
+    registrationId = data.id;
+  } catch {
+    // continue even if registration fails
+  }
+
   examQuestions = pickExam(ALL_QUESTIONS);
   userAnswers = {};
   flagged = new Set();
   currentQ = 0;
   submitted = false;
+
+  btn.disabled = false;
+  btn.textContent = 'Start Exam →';
+
   buildGrid();
   goTo(0);
   showScreen('exam');
@@ -458,8 +520,7 @@ function renderQuestion(idx) {
   document.getElementById('btn-flag').textContent = flagged.has(idx) ? '🚩 Flagged' : '🚩 Flag';
 
   const answered = Object.keys(userAnswers).length;
-  const submitBtn = document.getElementById('btn-submit');
-  submitBtn.style.display = answered === total ? 'inline-block' : 'none';
+  document.getElementById('btn-submit').style.display = answered === total ? 'inline-block' : 'none';
 
   updateGrid();
 }
@@ -487,10 +548,21 @@ function confirmSubmit() {
   submitExam();
 }
 
-function submitExam() {
+async function submitExam() {
   submitted = true;
   const results = calculateResults();
-  lastResults = { ...results, name: userName, email: userEmail };
+  lastResults = { ...results, name: userName, email: userEmail, registrationId };
+
+  try {
+    await fetch('/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(lastResults),
+    });
+  } catch {
+    // non-blocking
+  }
+
   showResults(results);
 }
 
@@ -510,12 +582,9 @@ function calculateResults() {
       sectionScores[sec].correct++;
     } else {
       wrongAnswers.push({
-        id: q.id,
-        question: q.q,
-        userAns: userAns || '—',
-        userText: userAns ? q[userAns] : 'No answer',
-        ans: q.ans,
-        correctText: q[q.ans],
+        id: q.id, question: q.q,
+        userAns: userAns || '—', userText: userAns ? q[userAns] : 'No answer',
+        ans: q.ans, correctText: q[q.ans],
       });
     }
   });
@@ -543,12 +612,8 @@ function showResults(results) {
     badge.className = 'status-badge status-fail';
   }
 
-  // Pre-fill email if provided
-  if (userEmail) {
-    document.getElementById('res-email').value = userEmail;
-  }
+  document.getElementById('res-email').value = userEmail;
 
-  // Section breakdown
   const breakdown = document.getElementById('section-breakdown');
   breakdown.innerHTML = '';
   Object.entries(sectionScores).sort().forEach(([sec, s]) => {
@@ -562,7 +627,6 @@ function showResults(results) {
     breakdown.appendChild(row);
   });
 
-  // Wrong answers
   const wrongCard = document.getElementById('wrong-card');
   const wrongList = document.getElementById('wrong-list');
   if (wrongAnswers.length === 0) {
@@ -591,22 +655,17 @@ async function submitEmail() {
   statusEl.style.color = '#666';
 
   try {
-    const payload = {
-      name: userName,
-      email,
-      ...lastResults,
-    };
     const resp = await fetch('/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...lastResults, email }),
     });
     const data = await resp.json();
     if (data.emailSent) {
       statusEl.textContent = '✓ Results sent to ' + email;
       statusEl.style.color = 'var(--green)';
     } else {
-      statusEl.textContent = '✓ Received! (Email delivery requires server configuration)';
+      statusEl.textContent = 'Results saved. (Email requires RESEND_API_KEY configuration)';
       statusEl.style.color = '#f57f17';
     }
   } catch {
