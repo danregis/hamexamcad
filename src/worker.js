@@ -51,7 +51,7 @@ async function handleRegister(request, env) {
         .prepare('SELECT id FROM registrations WHERE email = ?')
         .bind(email).first();
       if (existing) {
-        return Response.json({ success: false, alreadyRegistered: true });
+        return Response.json({ success: false, alreadyRegistered: true, id: existing.id });
       }
       const result = await env.DB
         .prepare('INSERT INTO registrations (name, email) VALUES (?, ?)')
@@ -576,14 +576,11 @@ async function startExam(e) {
   userName = document.getElementById('inp-name').value.trim();
   userEmail = document.getElementById('inp-email').value.trim();
 
-  // Client-side check: localStorage stores email on first successful register
+  // Client-side check: warn if email was already registered (but still allow exam)
   if (localStorage.getItem('registered_email') === userEmail) {
     showToast(t('alreadyRegistered'));
-    btn.disabled = false; btn.textContent = t('startBtn');
-    return;
   }
 
-  let alreadyReg = false;
   try {
     const resp = await fetch('/register', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -591,18 +588,12 @@ async function startExam(e) {
     });
     const data = await resp.json();
     if (data.alreadyRegistered) {
-      alreadyReg = true;
+      showToast(t('alreadyRegistered'));
     } else {
-      registrationId = data.id;
       localStorage.setItem('registered_email', userEmail);
     }
+    registrationId = data.id; // works for both new and existing registrations
   } catch {}
-
-  if (alreadyReg) {
-    showToast(t('alreadyRegistered'));
-    btn.disabled = false; btn.textContent = t('startBtn');
-    return;
-  }
 
   examQuestions = pickExam();
   userAnswers = {}; flagged = new Set(); currentQ = 0; submitted = false;

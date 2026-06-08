@@ -16,7 +16,7 @@ export async function onRequestPost({ request, env }) {
         .prepare('SELECT id FROM registrations WHERE email = ?')
         .bind(email).first();
       if (existing) {
-        return Response.json({ success: false, alreadyRegistered: true });
+        return Response.json({ success: false, alreadyRegistered: true, id: existing.id });
       }
       const result = await env.DB
         .prepare('INSERT INTO registrations (name, email) VALUES (?, ?)')
