@@ -5,7 +5,7 @@ compatibility_date = "2025-07-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "hamexam-db"
-database_id = "YOUR_DATABASE_ID_HERE"
+database_id = "61f424ca-5e0e-4611-ae9d-28445d6a9ef2"
 
 # Optional email secrets:
 #   wrangler secret put RESEND_API_KEY
