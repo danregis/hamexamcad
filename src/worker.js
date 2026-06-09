@@ -288,6 +288,9 @@ input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(213,43,30,.12
       <input type="email" id="inp-email" required placeholder="your@email.com" autocomplete="email">
       <button type="submit" class="btn-primary" id="btn-start">Start Exam →</button>
     </form>
+    <p style="text-align:center;margin-top:20px;font-size:0.75rem;color:#aaa;">
+      &copy; 2026 Dan Regis &mdash; <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener" style="color:#aaa;">MIT License</a> &mdash; Questions: <a href="https://www.qrz.com" target="_blank" rel="noopener" style="color:#aaa;">QRZ.com</a>
+    </p>
   </div>
 </div>
 
