@@ -434,6 +434,7 @@ const STR = {
     yourAns: '✗ Your answer: {k}) {v}',
     correct: '✓ Correct: {k}) {v}',
     noAns: 'No answer',
+    questionOf: 'Question {n} of {total}',
     langBtn: 'FR',
   },
   fr: {
@@ -477,6 +478,7 @@ const STR = {
     yourAns: '✗ Votre réponse : {k}) {v}',
     correct: '✓ Correct : {k}) {v}',
     noAns: 'Sans réponse',
+    questionOf: 'Question {n} sur {total}',
     langBtn: 'EN',
   }
 };
