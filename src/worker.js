@@ -512,6 +512,7 @@ function toggleLang() {
 }
 
 function setExamType(type) {
+  if (examQuestions.length > 0 && !submitted) return;
   examType = type;
   document.getElementById('btn-type-basic').classList.toggle('active', type === 'basic');
   document.getElementById('btn-type-adv').classList.toggle('active', type === 'advanced');
